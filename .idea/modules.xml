@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/../PRNet_Samuel/.idea/PRNet_Samuel.iml" filepath="$PROJECT_DIR$/../PRNet_Samuel/.idea/PRNet_Samuel.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/PRNet_PyTorch.iml" filepath="$PROJECT_DIR$/.idea/PRNet_PyTorch.iml" />
     </modules>
   </component>
 </project>

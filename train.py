@@ -34,7 +34,7 @@ manualSeed = 5
 INFO("Random Seed", manualSeed)
 random.seed(manualSeed)
 torch.manual_seed(manualSeed)
-
+torch.backends.cudnn.enabled = False
 
 def main(data_dir):
     # 0) Tensoboard Writer.
@@ -49,11 +49,11 @@ def main(data_dir):
                           transform=transforms.Compose([ToTensor(),
                                                         ToNormalize(FLAGS["normalize_mean"], FLAGS["normalize_std"])]))
 
-    wlp300_dataloader = DataLoader(dataset=wlp300, batch_size=FLAGS['batch_size'], shuffle=True, num_workers=4)
+    wlp300_dataloader = DataLoader(dataset=wlp300, batch_size=FLAGS['batch_size'], shuffle=True, num_workers=0)
 
     # 2) Intermediate Processing.
     transform_img = transforms.Compose([
-        transforms.ToTensor(),
+        # transforms.ToTensor(),
         transforms.Normalize(FLAGS["normalize_mean"], FLAGS["normalize_std"])
     ])
 
@@ -83,10 +83,11 @@ def main(data_dir):
 
     for ep in range(start_epoch, target_epoch):
         bar = tqdm(wlp300_dataloader)
+
         Loss_list, Stat_list = [], []
         for i, sample in enumerate(bar):
             uv_map, origin = sample['uv_map'].to(FLAGS['device']), sample['origin'].to(FLAGS['device'])
-
+            # print(origin.shape)
             # Inference.
             uv_map_result = model(origin)
 

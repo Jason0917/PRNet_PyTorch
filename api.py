@@ -8,7 +8,7 @@
 import torch
 import numpy as np
 from model.resfcn256 import ResFCN256
-
+torch.backends.cudnn.enabled = False
 
 class PRN:
     '''
