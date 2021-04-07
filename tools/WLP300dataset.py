@@ -68,7 +68,6 @@ class PRNetDataset(Dataset):
         return len(os.listdir(self.root_dir))
 
     def __getitem__(self, idx):
-        print(idx)
         original, uv_map = self.get_img_path(idx)
 
         origin = cv2.imread(original)

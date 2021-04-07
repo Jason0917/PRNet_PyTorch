@@ -85,11 +85,16 @@ def main(data_dir):
         bar = tqdm(wlp300_dataloader)
 
         Loss_list, Stat_list = [], []
+        pre_uv_map = torch.zeros([1, 3, 256, 256]).to(FLAGS['device'])
         for i, sample in enumerate(bar):
+
+            pre_uv_map.detach_()
             uv_map, origin = sample['uv_map'].to(FLAGS['device']), sample['origin'].to(FLAGS['device'])
             # print(origin.shape)
+            input = torch.cat((origin, pre_uv_map), 1)
             # Inference.
-            uv_map_result = model(origin)
+            uv_map_result = model(input)
+            pre_uv_map = uv_map_result
 
             # Loss & ssim stat.
             logit = loss(uv_map_result, uv_map)
@@ -118,9 +123,11 @@ def main(data_dir):
             writer.add_image('original', grid_1, FLAGS["summary_step"])
             writer.add_image('gt_uv_map', grid_2, FLAGS["summary_step"])
             writer.add_image('predicted_uv_map', grid_3, FLAGS["summary_step"])
-            writer.add_graph(model, uv_map)
+            # writer.add_graph(model, uv_map)
 
-        if ep % FLAGS["save_interval"] == 0:
+        # todo: modify the testing codes
+        # if ep % FLAGS["save_interval"] == 0:
+        if False:
             with torch.no_grad():
                 origin = cv2.imread("./test_data/obama_origin.jpg")
                 gt_uv_map = np.load("./test_data/test_obama.npy")
@@ -128,9 +135,10 @@ def main(data_dir):
 
                 origin, gt_uv_map = transform_img(origin), transform_img(gt_uv_map)
 
+                print(gt_uv_map.shape)
                 origin_in = origin.unsqueeze_(0).cuda()
                 pred_uv_map = model(origin_in).detach().cpu()
-
+                print("here")
                 save_image([origin.cpu(), gt_uv_map.unsqueeze_(0).cpu(), pred_uv_map],
                            os.path.join(FLAGS['images'], str(ep) + '.png'), nrow=1, normalize=True)
 
