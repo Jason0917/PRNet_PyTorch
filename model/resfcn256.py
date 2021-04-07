@@ -70,6 +70,7 @@ class ResFCN256(nn.Module):
         self.size = size
 
         # Encoder
+        # todo: Change input layer
         self.block0 = conv3x3(in_planes=3, out_planes=self.size, padding='same')
         self.block1 = ResBlock(inplanes=self.size, planes=self.size * 2, stride=2)
         self.block2 = ResBlock(inplanes=self.size * 2, planes=self.size * 2, stride=1)
@@ -127,6 +128,7 @@ class ResFCN256(nn.Module):
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
+        print(x.shape)
         se = self.block0(x)  # 256 x 256 x 16
         se = self.block1(se)  # 128 x 128 x 32
         se = self.block2(se)  # 128 x 128 x 32

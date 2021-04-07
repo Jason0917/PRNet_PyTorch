@@ -18,4 +18,5 @@ FLAGS = {"start_epoch": 0,
          "gauss_kernel": "original",
          "summary_path": "./prnet_runs",
          "summary_step": 0,
-         "resume": True}
+         "resume": True,
+         "stack_size": 3}

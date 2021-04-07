@@ -18,6 +18,8 @@ import numpy as np
 from PIL import Image
 from skimage import io
 
+from config.config import FLAGS
+
 data_transform = {'train': transforms.Compose([
     transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1),
     transforms.ToTensor(),
@@ -47,6 +49,7 @@ class PRNetDataset(Dataset):
         self.transform = transform
         self.dict = dict()
         self._max_idx()
+        self.stack_size = FLAGS["stack_size"]
 
     def get_img_path(self, img_id):
         img_id = self.dict.get(img_id)
@@ -68,13 +71,30 @@ class PRNetDataset(Dataset):
         return len(os.listdir(self.root_dir))
 
     def __getitem__(self, idx):
-        print(idx)
+        offset = (self.stack_size - 1) / 2
+        if idx-offset >= 0:
+            pre_idx = idx - offset
+            next_idx = idx + offset
+        else:
+            pre_idx = idx
+            idx = idx + offset
+            next_idx = idx + offset
+
+        pre_original, pre_uv_map = self.get_img_path(pre_idx)
         original, uv_map = self.get_img_path(idx)
+        next_original, next_uv_map = self.get_img_path(next_idx)
 
+        pre_origin = cv2.imread(pre_original)
         origin = cv2.imread(original)
-        uv_map = np.load(uv_map)
+        next_origin = cv2.imread(next_original)
 
-        sample = {'uv_map': uv_map, 'origin': origin}
+        pre_uv_map = np.load(pre_uv_map)
+        uv_map = np.load(uv_map)
+        next_uv_map = np.load(next_uv_map)
+
+        sample = {'uv_map': uv_map, 'origin': origin,
+                  'pre_uv_map': pre_uv_map, 'pre_origin': pre_origin,
+                  'next_uv_map': next_uv_map, 'next_origin': next_origin}
         if self.transform:
             sample = self.transform(sample)
 
@@ -85,19 +105,33 @@ class ToTensor(object):
     """Convert ndarrays in sample to Tensors."""
 
     def __call__(self, sample):
+        pre_uv_map, pre_origin = sample['pre_uv_map'], sample['pre_origin']
         uv_map, origin = sample['uv_map'], sample['origin']
+        next_uv_map, next_origin = sample['next_uv_map'], sample['next_origin']
 
         # swap color axis because
         # numpy image: H x W x C
         # torch image: C X H X W
+        pre_uv_map = pre_uv_map.transpose((2, 0, 1))
         uv_map = uv_map.transpose((2, 0, 1))
+        next_uv_map = next_uv_map.transpose((2, 0, 1))
+        pre_origin = pre_origin.transpose((2, 0, 1))
         origin = origin.transpose((2, 0, 1))
+        next_origin = next_origin.transpose((2, 0, 1))
 
+        pre_uv_map = pre_uv_map.astype("float32") / 255.
+        pre_uv_map = np.clip(pre_uv_map, 0, 1)
+        pre_origin = pre_origin.astype("float32") / 255.
         uv_map = uv_map.astype("float32") / 255.
         uv_map = np.clip(uv_map, 0, 1)
         origin = origin.astype("float32") / 255.
-        
-        return {'uv_map': torch.from_numpy(uv_map), 'origin': torch.from_numpy(origin)}
+        next_uv_map = next_uv_map.astype("float32") / 255.
+        next_uv_map = np.clip(next_uv_map, 0, 1)
+        next_origin = next_origin.astype("float32") / 255.
+
+        return {'pre_uv_map': torch.from_numpy(pre_uv_map), 'pre_origin': torch.from_numpy(pre_origin),
+                'uv_map': torch.from_numpy(uv_map), 'origin': torch.from_numpy(origin),
+                'next_uv_map': torch.from_numpy(next_uv_map), 'next_origin': torch.from_numpy(next_origin)}
 
 
 class ToNormalize(object):
@@ -109,6 +143,12 @@ class ToNormalize(object):
         self.inplace = inplace
 
     def __call__(self, sample):
+        pre_uv_map, pre_origin = sample['pre_uv_map'], sample['pre_origin']
         uv_map, origin = sample['uv_map'], sample['origin']
+        next_uv_map, next_origin = sample['uv_map'], sample['origin']
+        pre_origin = F.normalize(pre_origin, self.mean, self.std, self.inplace)
         origin = F.normalize(origin, self.mean, self.std, self.inplace)
-        return {'uv_map': uv_map, 'origin': origin}
+        next_origin = F.normalize(next_origin, self.mean, self.std, self.inplace)
+        return {'pre_uv_map': pre_uv_map, 'pre_origin': pre_origin,
+                'uv_map': uv_map, 'origin': origin,
+                'next_uv_map': next_uv_map, 'next_origin': next_origin}

@@ -36,6 +36,7 @@ random.seed(manualSeed)
 torch.manual_seed(manualSeed)
 torch.backends.cudnn.enabled = False
 
+
 def main(data_dir):
     # 0) Tensoboard Writer.
     writer = SummaryWriter(FLAGS['summary_path'])
@@ -86,6 +87,10 @@ def main(data_dir):
 
         Loss_list, Stat_list = [], []
         for i, sample in enumerate(bar):
+            if i == wlp300_dataloader.__len__():
+                break
+
+            # todo: modify the input
             uv_map, origin = sample['uv_map'].to(FLAGS['device']), sample['origin'].to(FLAGS['device'])
             # print(origin.shape)
             # Inference.
@@ -103,7 +108,8 @@ def main(data_dir):
             optimizer.zero_grad()
             logit.backward()
             optimizer.step()
-            bar.set_description(" {} [Loss(Paper)] {} [SSIM({})] {}".format(ep, Loss_list[-1], FLAGS["gauss_kernel"], Stat_list[-1]))
+            bar.set_description(
+                " {} [Loss(Paper)] {} [SSIM({})] {}".format(ep, Loss_list[-1], FLAGS["gauss_kernel"], Stat_list[-1]))
 
             # Record Training information in Tensorboard.
             if origin_img is None and uv_map_gt is None:
@@ -113,7 +119,8 @@ def main(data_dir):
             writer.add_scalar("Original Loss", Loss_list[-1], FLAGS["summary_step"])
             writer.add_scalar("SSIM Loss", Stat_list[-1], FLAGS["summary_step"])
 
-            grid_1, grid_2, grid_3 = make_grid(origin_img, normalize=True), make_grid(uv_map_gt), make_grid(uv_map_predicted)
+            grid_1, grid_2, grid_3 = make_grid(origin_img, normalize=True), make_grid(uv_map_gt), make_grid(
+                uv_map_predicted)
 
             writer.add_image('original', grid_1, FLAGS["summary_step"])
             writer.add_image('gt_uv_map', grid_2, FLAGS["summary_step"])
@@ -149,6 +156,7 @@ def main(data_dir):
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--train_dir", help="specify input directory.")
     args = parser.parse_args()
