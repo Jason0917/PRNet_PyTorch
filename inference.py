@@ -8,6 +8,8 @@ import scipy.io as sio
 import argparse
 import ast
 
+import torch
+
 from api import PRN
 from torchvision import transforms, utils, models
 
@@ -18,6 +20,8 @@ from utils.rotate_vertices import frontalize
 # from utils.write import write_obj_with_colors, write_obj_with_texture
 
 from config.config import FLAGS
+from utils.utils import test_data_preprocess
+
 
 def main(args):
     if args.isShow or args.isTexture:
@@ -27,6 +31,12 @@ def main(args):
     # ---- transform
     transform_img = transforms.Compose([
         transforms.ToTensor(),
+        transforms.Normalize(FLAGS["normalize_mean"], FLAGS["normalize_std"])
+    ])
+
+    # ---- transform
+    transform_uv_map = transforms.Compose([
+        # transforms.ToTensor(),
         transforms.Normalize(FLAGS["normalize_mean"], FLAGS["normalize_std"])
     ])
 
@@ -59,7 +69,10 @@ def main(args):
 
         # the core: regress position map
         image = cv2.resize(image, (256, 256))
-        image_t = transform_img(image)
+        image_t = transform_img(image).to('cuda')
+
+        sample_uv_map = transform_uv_map(test_data_preprocess(np.load('sample_uv_map.npy')))
+        image_t = torch.cat((image_t, sample_uv_map), 0)
         image_t = image_t.unsqueeze(0)
         pos = prn.net_forward(image_t.cuda())  # input image has been cropped to 256x256
 
