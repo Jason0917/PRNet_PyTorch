@@ -62,8 +62,8 @@ def main(data_dir):
     model = ResFCN256()
 
     # Load the pre-trained weight
-    if FLAGS['resume'] and os.path.exists(os.path.join(FLAGS['images'], "latest.pth")):
-        state = torch.load(os.path.join(FLAGS['images'], "latest.pth"))
+    if FLAGS['resume'] and os.path.exists(os.path.join(FLAGS['images'], "6channels.pth")):
+        state = torch.load(os.path.join(FLAGS['images'], "6channels.pth"))
         model.load_state_dict(state['prnet'])
         start_epoch = state['start_epoch']
         INFO("Load the pre-trained weight! Start from Epoch", start_epoch)
@@ -140,7 +140,7 @@ def main(data_dir):
                 'Loss': Loss_list,
                 'start_epoch': ep,
             }
-            torch.save(state, os.path.join(FLAGS['images'], 'latest.pth'))
+            torch.save(state, os.path.join(FLAGS['images'], '6channels.pth'))
 
             scheduler.step()
 
