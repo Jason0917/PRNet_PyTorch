@@ -85,10 +85,12 @@ def main(data_dir):
         bar = tqdm(wlp300_dataloader)
         sample_uv_map = transform_img(test_data_preprocess(np.load('sample_uv_map.npy')))
         Loss_list, Stat_list = [], []
-        pre_uv_map = torch.zeros([1, 3, 256, 256]).to(FLAGS['device'])
+        pre_uv_map = torch.zeros([FLAGS['batch_size'], 3, 256, 256]).to(FLAGS['device'])
         for i, sample in enumerate(bar):
 
+            optimizer.zero_grad()
             pre_uv_map.detach_()
+
             uv_map, origin = sample['uv_map'].to(FLAGS['device']), sample['origin'].to(FLAGS['device'])
             # print(origin.shape)
             input = torch.cat((origin, pre_uv_map), 1)
@@ -105,7 +107,6 @@ def main(data_dir):
             Stat_list.append(stat_logit.item())
 
             # Update.
-            optimizer.zero_grad()
             logit.backward()
             optimizer.step()
             bar.set_description(" {} [Loss(Paper)] {} [SSIM({})] {}".format(ep, Loss_list[-1], FLAGS["gauss_kernel"], Stat_list[-1]))
