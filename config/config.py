@@ -6,7 +6,7 @@
 """
 
 FLAGS = {"start_epoch": 0,
-         "target_epoch": 500,
+         "target_epoch": 1,
          "device": "cuda",
          "mask_path": "./utils/uv_data/uv_weight_mask_gdh.png",
          "lr": 0.0001,

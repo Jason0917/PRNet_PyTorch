@@ -71,7 +71,7 @@ class ResFCN256(nn.Module):
 
         # Encoder
         # todo: Change input layer
-        self.block0 = conv3x3(in_planes=3, out_planes=self.size, padding='same')
+        self.block0 = conv3x3(in_planes=9, out_planes=self.size, padding='same')
         self.block1 = ResBlock(inplanes=self.size, planes=self.size * 2, stride=2)
         self.block2 = ResBlock(inplanes=self.size * 2, planes=self.size * 2, stride=1)
         self.block3 = ResBlock(inplanes=self.size * 2, planes=self.size * 4, stride=2)

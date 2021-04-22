@@ -29,6 +29,8 @@ from torchvision import transforms, utils, models
 from torch.utils.data import DataLoader
 import torchvision.transforms.functional as F
 
+
+
 # Set random seem for reproducibility
 manualSeed = 5
 INFO("Random Seed", manualSeed)
@@ -46,25 +48,15 @@ def main(data_dir):
         os.mkdir(FLAGS['images'])
 
     # 1) Create Dataset of 300_WLP & Dataloader.
-    wlp300 = PRNetDataset(root_dir=data_dir,
-                          transform=transforms.Compose([ToTensor(),
-                                                        ToNormalize(FLAGS["normalize_mean"], FLAGS["normalize_std"])]))
-
-    wlp300_dataloader = DataLoader(dataset=wlp300, batch_size=FLAGS['batch_size'], shuffle=True, num_workers=0)
-
-    # 2) Intermediate Processing.
-    transform_img = transforms.Compose([
-        # transforms.ToTensor(),
-        transforms.Normalize(FLAGS["normalize_mean"], FLAGS["normalize_std"])
-    ])
+    
 
     # 3) Create PRNet model.
     start_epoch, target_epoch = FLAGS['start_epoch'], FLAGS['target_epoch']
     model = ResFCN256()
 
     # Load the pre-trained weight
-    if FLAGS['resume'] and os.path.exists(os.path.join(FLAGS['images'], "latest.pth")):
-        state = torch.load(os.path.join(FLAGS['images'], "latest.pth"))
+    if FLAGS['resume'] and os.path.exists(os.path.join(FLAGS['images'], "latest_for_IBUG2.pth")):
+        state = torch.load(os.path.join(FLAGS['images'], "latest_for_IBUG2.pth"))
         model.load_state_dict(state['prnet'])
         start_epoch = state['start_epoch']
         INFO("Load the pre-trained weight! Start from Epoch", start_epoch)
@@ -83,63 +75,86 @@ def main(data_dir):
     loss = WeightMaskLoss(mask_path=FLAGS["mask_path"])
 
     for ep in range(start_epoch, target_epoch):
-        bar = tqdm(wlp300_dataloader)
+        for dir in os.listdir(data_dir):
+            print('dir',dir)
+            input_path = os.path.join(data_dir, dir)
+            wlp300 = PRNetDataset(root_dir=input_path,
+                                  transform=transforms.Compose([ToTensor(),
+                                                                ToNormalize(FLAGS["normalize_mean"],
+                                                                            FLAGS["normalize_std"])]))
+    
+            wlp300_dataloader = DataLoader(dataset=wlp300, batch_size=FLAGS['batch_size'], shuffle=True, num_workers=0)
+            # print(wlp300_dataloader.shape)
+            print('dataloader',len(wlp300_dataloader))
+            # 2) Intermediate Processing.
+            transform_img = transforms.Compose([
+                # transforms.ToTensor(),
+                transforms.Normalize(FLAGS["normalize_mean"], FLAGS["normalize_std"])
+            ])
+    
 
-        Loss_list, Stat_list = [], []
-        for i, sample in enumerate(bar):
-            if i == wlp300_dataloader.__len__():
-                break
+            bar = tqdm(wlp300_dataloader)
 
-            # todo: modify the input
-            uv_map, origin = sample['uv_map'].to(FLAGS['device']), sample['origin'].to(FLAGS['device'])
-            # print(origin.shape)
-            # Inference.
-            uv_map_result = model(origin)
+    
+            Loss_list, Stat_list = [], []
+            for i, sample in enumerate(bar):
+                print(i,"here")
+                if i == wlp300_dataloader.__len__():
+                    break
+    
+                # todo: modify the input
+                uv_map, origin = sample['uv_map'].to(FLAGS['device']), sample['origin'].to(FLAGS['device'])
+                pre_origin = sample['pre_origin'].to(FLAGS['device'])
+                next_origin = sample['next_origin'].to(FLAGS['device'])
+                input = torch.cat((pre_origin,origin,next_origin),1)
+                # print(origin.shape)
+                # Inference.
+                uv_map_result = model(input)
+    
+                # Loss & ssim stat.
+                logit = loss(uv_map_result, uv_map)
+                stat_logit = stat_loss(uv_map_result, uv_map)
+    
+                # Record Loss.
+                Loss_list.append(logit.item())
+                Stat_list.append(stat_logit.item())
+    
+                # Update.
+                optimizer.zero_grad()
+                logit.backward()
+                optimizer.step()
+                bar.set_description(
+                    " {} [Loss(Paper)] {} [SSIM({})] {}".format(ep, Loss_list[-1], FLAGS["gauss_kernel"], Stat_list[-1]))
+    
+                # Record Training information in Tensorboard.
+                if origin_img is None and uv_map_gt is None:
+                    origin_img, uv_map_gt = origin, uv_map
+                uv_map_predicted = uv_map_result
+    
+                writer.add_scalar("Original Loss", Loss_list[-1], FLAGS["summary_step"])
+                writer.add_scalar("SSIM Loss", Stat_list[-1], FLAGS["summary_step"])
+    
+                grid_1, grid_2, grid_3 = make_grid(origin_img, normalize=True), make_grid(uv_map_gt), make_grid(
+                    uv_map_predicted)
+    
+                writer.add_image('original', grid_1, FLAGS["summary_step"])
+                writer.add_image('gt_uv_map', grid_2, FLAGS["summary_step"])
+                writer.add_image('predicted_uv_map', grid_3, FLAGS["summary_step"])
+                # writer.add_graph(model, uv_map)
 
-            # Loss & ssim stat.
-            logit = loss(uv_map_result, uv_map)
-            stat_logit = stat_loss(uv_map_result, uv_map)
+        #if ep % FLAGS["save_interval"] == 0:
+        #    with torch.no_grad():
+        #        origin = cv2.imread("./test_data/obama_origin.jpg")
+        #        gt_uv_map = np.load("./test_data/test_obama.npy")
+        #        origin, gt_uv_map = test_data_preprocess(origin), test_data_preprocess(gt_uv_map)
 
-            # Record Loss.
-            Loss_list.append(logit.item())
-            Stat_list.append(stat_logit.item())
+        #        origin, gt_uv_map = transform_img(origin), transform_img(gt_uv_map)
 
-            # Update.
-            optimizer.zero_grad()
-            logit.backward()
-            optimizer.step()
-            bar.set_description(
-                " {} [Loss(Paper)] {} [SSIM({})] {}".format(ep, Loss_list[-1], FLAGS["gauss_kernel"], Stat_list[-1]))
+        #        origin_in = origin.unsqueeze_(0).cuda()
+        #        pred_uv_map = model(origin_in).detach().cpu()
 
-            # Record Training information in Tensorboard.
-            if origin_img is None and uv_map_gt is None:
-                origin_img, uv_map_gt = origin, uv_map
-            uv_map_predicted = uv_map_result
-
-            writer.add_scalar("Original Loss", Loss_list[-1], FLAGS["summary_step"])
-            writer.add_scalar("SSIM Loss", Stat_list[-1], FLAGS["summary_step"])
-
-            grid_1, grid_2, grid_3 = make_grid(origin_img, normalize=True), make_grid(uv_map_gt), make_grid(
-                uv_map_predicted)
-
-            writer.add_image('original', grid_1, FLAGS["summary_step"])
-            writer.add_image('gt_uv_map', grid_2, FLAGS["summary_step"])
-            writer.add_image('predicted_uv_map', grid_3, FLAGS["summary_step"])
-            writer.add_graph(model, uv_map)
-
-        if ep % FLAGS["save_interval"] == 0:
-            with torch.no_grad():
-                origin = cv2.imread("./test_data/obama_origin.jpg")
-                gt_uv_map = np.load("./test_data/test_obama.npy")
-                origin, gt_uv_map = test_data_preprocess(origin), test_data_preprocess(gt_uv_map)
-
-                origin, gt_uv_map = transform_img(origin), transform_img(gt_uv_map)
-
-                origin_in = origin.unsqueeze_(0).cuda()
-                pred_uv_map = model(origin_in).detach().cpu()
-
-                save_image([origin.cpu(), gt_uv_map.unsqueeze_(0).cpu(), pred_uv_map],
-                           os.path.join(FLAGS['images'], str(ep) + '.png'), nrow=1, normalize=True)
+        #        save_image([origin.cpu(), gt_uv_map.unsqueeze_(0).cpu(), pred_uv_map],
+        #                   os.path.join(FLAGS['images'], str(ep) + '.png'), nrow=1, normalize=True)
 
             # Save model
             state = {
@@ -147,7 +162,7 @@ def main(data_dir):
                 'Loss': Loss_list,
                 'start_epoch': ep,
             }
-            torch.save(state, os.path.join(FLAGS['images'], 'latest.pth'))
+            torch.save(state, os.path.join(FLAGS['images'], 'latest_for_IBUG2.pth'))
 
             scheduler.step()
 
@@ -160,4 +175,5 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--train_dir", help="specify input directory.")
     args = parser.parse_args()
-    main(args.train_dir)
+    #main(args.train_dir)
+    main('IBUG_UV_Maps')

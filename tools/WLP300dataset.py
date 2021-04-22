@@ -50,10 +50,14 @@ class PRNetDataset(Dataset):
         self.dict = dict()
         self._max_idx()
         self.stack_size = FLAGS["stack_size"]
+        self.len = len(os.listdir(self.root_dir))
+        print('lennnn',self.len)
+        
 
     def get_img_path(self, img_id):
         img_id = self.dict.get(img_id)
-        if img_id:
+        print("img_id",img_id)
+        if img_id>=0:
             original = os.path.join(self.root_dir, str(img_id), 'original.jpg')
             # fixme: Thanks to mj, who fix an important bug!
             uv_map_path = glob(os.path.join(self.root_dir, str(img_id), "*.npy"))
@@ -71,14 +75,25 @@ class PRNetDataset(Dataset):
         return len(os.listdir(self.root_dir))
 
     def __getitem__(self, idx):
-        offset = (self.stack_size - 1) / 2
-        if idx-offset >= 0:
+        print('lennn',self.len)
+        print("idx",idx)
+        #offset = (self.stack_size - 1) / 2
+        offset = 1
+        if idx == self.len - 1:
+            print('1111')
+            pre_idx = idx - 2 * offset
+            next_idx = idx
+            idx = idx - offset
+        elif idx-offset >= 0:
             pre_idx = idx - offset
             next_idx = idx + offset
-        else:
+        elif idx == 0 :
             pre_idx = idx
             idx = idx + offset
             next_idx = idx + offset
+
+        print("pre_idx",pre_idx)
+        print("next_idx",next_idx)
 
         pre_original, pre_uv_map = self.get_img_path(pre_idx)
         original, uv_map = self.get_img_path(idx)

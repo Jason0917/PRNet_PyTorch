@@ -25,13 +25,14 @@ def process_uv(uv_coords, uv_h=256, uv_w=256):
     return uv_coords
 
 
-def run_posmap_300W_LP(bfm, image_path, mat_path, save_folder, idx=0, uv_h=256, uv_w=256, image_h=256, image_w=256):
+def run_posmap_300W_LP(bfm, image_path, mat_path, save_folder,  idx, uv_h=256, uv_w=256, image_h=256, image_w=256):
     # 1. load image and fitted parameters
     image_name = image_path.strip().split('/')[-1]
     image = io.imread(image_path) / 255.
     [h, w, c] = image.shape
 
     info = sio.loadmat(mat_path)
+    print(info)
     pose_para = info['Pose_Para'].T.astype(np.float32)
     shape_para = info['Shape_Para'].astype(np.float32)
     exp_para = info['Exp_Para'].astype(np.float32)
@@ -98,7 +99,7 @@ def run_posmap_300W_LP(bfm, image_path, mat_path, save_folder, idx=0, uv_h=256, 
     # io.imsave('{}/{}'.format(save_folder, image_name.replace('.jpg', '_tex.jpg')), np.squeeze(uv_texture_map_rec))
 
 
-def generate_batch_sample(input_dir, save_folder='./300WLP'):
+def generate_batch_sample(input_dir, save_folder, mat_dir):
     if not os.path.exists(save_folder):
         os.mkdir(save_folder)
     # set para
@@ -106,7 +107,7 @@ def generate_batch_sample(input_dir, save_folder='./300WLP'):
 
     # load uv coords
     global uv_coords
-    uv_coords = face3d.morphable_model.load.load_uv_coords('BFM/BFM_UV.mat')  #
+    uv_coords = face3d.morphable_model.load.load_uv_coords('BFM_UV.mat')  #
     uv_coords = process_uv(uv_coords, uv_h, uv_w)
 
     # load bfm
@@ -124,22 +125,34 @@ def generate_batch_sample(input_dir, save_folder='./300WLP'):
 
     """
     base = 0
-
+    id = 0
     for idx, item in enumerate(os.listdir(input_dir)):
         if 'jpg' in item:
             ab_path = os.path.join(input_dir, item)
             img_path = ab_path
-            mat_path = ab_path.replace('jpg', 'mat')
 
-            run_posmap_300W_LP(bfm, img_path, mat_path, save_folder, idx + base)
+            mat_path = os.path.join(mat_dir,item)
+            mat_path = mat_path.replace('jpg', 'mat')
+            #save_folder = os.path.join(save_folder,tem+item)
+            run_posmap_300W_LP(bfm, img_path, mat_path, save_folder, id + base)
             print("Number {} uv_pos_map was generated!".format(idx))
+            id = id+1
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--save_dir", help="specify output uv_map directory.")
-    parser.add_argument("--input_dir", help="specify input origin mat & image directory.")
-    args = parser.parse_args()
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument("--save_dir", help="specify output uv_map directory.")
+    # parser.add_argument("--input_dir", help="specify input origin mat & image directory.")
+    # args = parser.parse_args()
+    input_dir = '../Ibug'
 
-    generate_batch_sample(save_folder=args.save_dir,
-                          input_dir=args.input_dir)
+
+
+    for dir in os.listdir(input_dir):
+         # input_path = os.path.join(args.input_dir, dir, 'vid')
+         # output_path = os.path.join(args.save_dir, dir)
+         input_path = os.path.join(input_dir, dir)
+         print(input_path)
+         output_path = os.path.join('../IBUG_UV_Maps', dir)
+         mat_path = os.path.join(input_dir,dir)
+         generate_batch_sample(save_folder=output_path, input_dir=input_path, mat_dir = mat_path)
