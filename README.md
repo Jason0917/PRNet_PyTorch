@@ -11,7 +11,7 @@
 This is an unofficial pytorch implementation of **PRNet** since there is not a complete generating and training code
 of [`300WLP`](http://www.cbsr.ia.ac.cn/users/xiangyuzhu/projects/3DDFA/main.htm) dataset.
 
-If you want to use other modified architecture, please check out **out-and-in** or **multi-frames** branches.
+If you want to use our modified architecture, please check out **out-and-in** or **multi-frames** branches.
 
 - Author: Samuel Ko, mjanddy, Zihao Jian, Minshan Xie.
 
