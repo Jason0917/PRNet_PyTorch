@@ -11,7 +11,9 @@
 This is an unofficial pytorch implementation of **PRNet** since there is not a complete generating and training code
 of [`300WLP`](http://www.cbsr.ia.ac.cn/users/xiangyuzhu/projects/3DDFA/main.htm) dataset.
 
-- Author: Samuel Ko, mjanddy.
+If you want to use our modified architecture, please check out **out-and-in** or **multi-frames** branches.
+
+- Author: Samuel Ko, mjanddy, Zihao Jian, Minshan Xie.
 
 -------
 ### Update Log 
@@ -92,13 +94,6 @@ After finish the above two step, you can train your own PRNet as:
 
 python3 train.py --train_dir ./300WLP_IBUG
 ```
-
-You can use tensorboard to visualize the intermediate output in `localhost:6006`:
-```shell
-tensorboard --logdir=absolute_path_of_prnet_runs/
-```
-
-![Tensorboard example](docs/image/Tensorboard1.png)
 
 The following image is used to judge the effectiveness of PRNet to unknown data.
 
