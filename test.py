@@ -50,28 +50,14 @@ def main(data_dir):
     ])
 
     # # 3) Create PRNet model.
-    # start_epoch, target_epoch = FLAGS['start_epoch'], FLAGS['target_epoch']
-    # model = ResFCN256()
-    #
-    # # Load the pre-trained weight
-    # if FLAGS['resume'] and os.path.exists(os.path.join(FLAGS['images'], "3channels.pth")):
-    #     state = torch.load(os.path.join(FLAGS['images'], "3channels.pth"))
-    #     model.load_state_dict(state['prnet'])
-    #     start_epoch = state['start_epoch']
-    #     INFO("Load the pre-trained weight! Start from Epoch", start_epoch)
-    #
-    # model.to("cuda")
-    prn = PRN(os.path.join(FLAGS['images'], "6channels.pth"))
+    prn = PRN(os.path.join(FLAGS['images'], "latest_for_IBUG.pth"))
 
     bar = tqdm(wlp300_dataloader)
     nme_list = []
     for i, sample in enumerate(bar):
         uv_map, origin = sample['uv_map'].to(FLAGS['device']), sample['origin'].to(FLAGS['device'])
-        # print(origin.shape)
+
         # Inference.
-        # origin = cv2.resize(origin, (256, 256))
-        # origin = transform_img(origin)
-        # origin = origin.unsqueeze(0)
         default_uv_map = torch.zeros([FLAGS['batch_size'], 3, 256, 256]).to(FLAGS['device'])
         input = torch.cat((origin.cuda(), default_uv_map), 1)
         uv_map_result = prn.net_forward(input)
@@ -96,7 +82,7 @@ def main(data_dir):
             y = kpt_gt[j][1] - kpt_predicted[j][1]
             L2_norm = math.sqrt(math.pow(x, 2) + math.pow(y, 2))
             # bounding box size has been fixed to 256x256
-            d = 256*256
+            d = math.sqrt(256*256)
             error = L2_norm/d
             nme_sum += error
         nme_list.append(nme_sum/68)
