@@ -36,7 +36,7 @@ data_transform = {'train': transforms.Compose([
 
 
 class PRNetDataset(Dataset):
-    """Pedestrian Attribute Landmarks dataset."""
+    """Pedestrian Attribute Landmarks dataset.""" 
 
     def __init__(self, root_dir, transform=None):
         """

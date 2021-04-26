@@ -7,6 +7,7 @@ from glob import glob
 import scipy.io as sio
 import argparse
 import ast
+import torch
 
 from api import PRN
 from torchvision import transforms, utils, models
@@ -37,51 +38,66 @@ def main(args):
     # ------------- load data
     image_folder = args.inputDir
     save_folder = args.outputDir
-    if not os.path.exists(save_folder):
-        os.mkdir(save_folder)
+    #if not os.path.exists(save_folder):
+    #    os.mkdir(save_folder)
 
-    types = ('*.jpg', '*.png')
-    image_path_list = []
-    for files in types:
-        image_path_list.extend(glob(os.path.join(image_folder, files)))
-    total_num = len(image_path_list)
-    print("#" * 25)
-    print("[PRNet Inference] {} picture were under processing~".format(total_num))
-    print("#"*25)
+    #types = ('*.jpg', '*.png')
+    #image_path_list = []
+    #for files in types:
+    #    image_path_list.extend(glob(os.path.join(image_folder, files)))
+    #total_num = len(image_path_list)
+    #print("#" * 25)
+    #print("[PRNet Inference] {} picture were under processing~".format(total_num))
+    #print("#"*25)
 
-    for i, image_path in enumerate(image_path_list):
+    #for i, image_path in enumerate(image_path_list):
 
-        name = image_path.strip().split('/')[-1][:-4]
-
+    #    name = image_path.strip().split('/')[-1][:-4]
+    pre_origin = cv2.imread('./TestImages/46.jpg')
+    origin = cv2.imread('./TestImages/47.jpg')
+    next_origin = cv2.imread('./TestImages/48.jpg')
+    #input = torch.cat((toTensor(pre_origin), toTensor(origin), toTensor(next_origin)), 1)
         # read image
-        image = cv2.imread(image_path)
-        [h, w, c] = image.shape
-
+        #image = cv2.imread(image_path)
+    [h, w, c] = pre_origin.shape
         # the core: regress position map
-        image = cv2.resize(image, (256, 256))
-        image_t = transform_img(image)
-        image_t = image_t.unsqueeze(0)
-        pos = prn.net_forward(image_t.cuda())  # input image has been cropped to 256x256
+    image = cv2.resize(pre_origin, (256, 256))
+    image_t1 = transform_img(image)
 
-        out = pos.cpu().detach().numpy()
-        pos = np.squeeze(out)
-        cropped_pos = pos * 255
-        pos = cropped_pos.transpose(1, 2, 0)
+    [h, w, c] = origin.shape
+    # the core: regress position map
+    image = cv2.resize(pre_origin, (256, 256))
+    image_t2 = transform_img(image)
 
-        if pos is None:
-            continue
+    [h, w, c] = next_origin.shape
+    # the core: regress position map
+    image = cv2.resize(pre_origin, (256, 256))
+    image_t3 = transform_img(image)
 
-        if args.is3d or args.isMat or args.isPose or args.isShow:
+    image_t = torch.cat((image_t1,image_t2,image_t3), 0)
+
+    image_t = image_t.unsqueeze(0)
+    pos = prn.net_forward(image_t.cuda())  # input image has been cropped to 256x256
+
+    out = pos.cpu().detach().numpy()
+    pos = np.squeeze(out)
+    cropped_pos = pos * 255
+    pos = cropped_pos.transpose(1, 2, 0)
+
+        #if pos is None:
+        #    continue
+
+    if args.is3d or args.isMat or args.isPose or args.isShow:
             # 3D vertices
-            vertices = prn.get_vertices(pos)
-            if args.isFront:
-                save_vertices = frontalize(vertices)
-            else:
-                save_vertices = vertices.copy()
-            save_vertices[:, 1] = h - 1 - save_vertices[:, 1]
+        vertices = prn.get_vertices(pos)
+        if args.isFront:
+            save_vertices = frontalize(vertices)
+        else:
+            save_vertices = vertices.copy()
+        save_vertices[:, 1] = h - 1 - save_vertices[:, 1]
 
-        if args.isImage:
-            cv2.imwrite(os.path.join(save_folder, name + '.jpg'), image)
+    if args.isImage:
+        cv2.imwrite(os.path.join(save_folder, name + '.jpg'), image)
 
         # if args.is3d:
         #     # corresponding colors
@@ -111,26 +127,26 @@ def main(args):
         #     cv2.imwrite(os.path.join(save_folder, name + '_depth.jpg'), depth_image)
         #     sio.savemat(os.path.join(save_folder, name + '_depth.mat'), {'depth': depth})
 
-        if args.isKpt or args.isShow:
-            # get landmarks
-            kpt = prn.get_landmarks(pos)
-            np.savetxt(os.path.join(save_folder, name + '_kpt.txt'), kpt)
+    if args.isKpt or args.isShow:
+        # get landmarks
+        kpt = prn.get_landmarks(pos)
+        np.savetxt(os.path.join(save_folder, 'name' + '_kpt.txt'), kpt)
 
-        if args.isPose or args.isShow:
-            # estimate pose
-            camera_matrix, pose = estimate_pose(vertices)
-            np.savetxt(os.path.join(save_folder, name + '_pose.txt'), pose)
-            np.savetxt(os.path.join(save_folder, name + '_camera_matrix.txt'), camera_matrix)
+    if args.isPose or args.isShow:
+        # estimate pose
+        camera_matrix, pose = estimate_pose(vertices)
+        np.savetxt(os.path.join(save_folder, 'name' + '_pose.txt'), pose)
+        np.savetxt(os.path.join(save_folder, 'name' + '_camera_matrix.txt'), camera_matrix)
 
-            np.savetxt(os.path.join(save_folder, name + '_pose.txt'), pose)
+        np.savetxt(os.path.join(save_folder, 'name' + '_pose.txt'), pose)
 
-        if args.isShow:
-            # ---------- Plot
-            image_pose = plot_pose_box(image, camera_matrix, kpt)
-            cv2.imshow('sparse alignment', plot_kpt(image, kpt))
-            cv2.imshow('dense alignment', plot_vertices(image, vertices))
-            cv2.imshow('pose', plot_pose_box(image, camera_matrix, kpt))
-            cv2.waitKey(0)
+    if args.isShow:
+        # ---------- Plot
+        image_pose = plot_pose_box(image, camera_matrix, kpt)
+        cv2.imshow('sparse alignment', plot_kpt(image, kpt))
+        cv2.imshow('dense alignment', plot_vertices(image, vertices))
+        cv2.imshow('pose', plot_pose_box(image, camera_matrix, kpt))
+        cv2.waitKey(0)
 
 
 if __name__ == '__main__':
@@ -144,7 +160,7 @@ if __name__ == '__main__':
                         help='path to the output directory, where results(obj,txt files) will be stored.')
     parser.add_argument('--gpu', default='0', type=str,
                         help='set gpu id, -1 for CPU')
-    parser.add_argument('--model', default='results/latest.pth', type=str,
+    parser.add_argument('--model', default='results/latest_for_IBUG.pth', type=str,
                         help='model path')
     parser.add_argument('--is3d', default=True, type=ast.literal_eval,
                         help='whether to output 3D face(.obj). default save colors.')

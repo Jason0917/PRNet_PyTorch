@@ -29,7 +29,7 @@ class PRN:
         self.triangles_path = kwargs.get("triangles_path") or "utils/uv_data/triangles.txt"
 
         # 1) load model.
-        self.pos_predictor = ResFCN256()
+        self.pos_predictor = torch.nn.DataParallel(ResFCN256())
         state = torch.load(model_dir)
         self.pos_predictor.load_state_dict(state['prnet'])
         self.pos_predictor.eval()  # inference stage only.
