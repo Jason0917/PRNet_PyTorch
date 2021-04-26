@@ -1,10 +1,5 @@
 # -*- coding: utf-8 -*-
 
-"""
-    @date: 2019.07.18
-    @author: samuel ko
-    @func: PRNet Training Part.
-"""
 import os
 import cv2
 import random

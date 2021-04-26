@@ -10,6 +10,7 @@ import ast
 
 from api import PRN
 from torchvision import transforms, utils, models
+import time
 
 
 from utils.estimate_pose import estimate_pose
@@ -31,7 +32,6 @@ def main(args):
     ])
 
 
-
     # ---- init PRN
     prn = PRN(args.model)
     # ------------- load data
@@ -50,7 +50,7 @@ def main(args):
     print("#"*25)
 
     for i, image_path in enumerate(image_path_list):
-
+        start = time.clock()
         name = image_path.strip().split('/')[-1][:-4]
 
         # read image
@@ -61,7 +61,7 @@ def main(args):
         image = cv2.resize(image, (256, 256))
         image_t = transform_img(image)
         image_t = image_t.unsqueeze(0)
-        print(image_t.shape)
+        # print(image_t.shape)
         pos = prn.net_forward(image_t.cuda())  # input image has been cropped to 256x256
 
         out = pos.cpu().detach().numpy()
@@ -114,9 +114,9 @@ def main(args):
 
         if args.isKpt or args.isShow:
             # get landmarks
-            print(pos.shape)
+            # print(pos.shape)
             kpt = prn.get_landmarks(pos)
-            print("size:", kpt.shape)
+            # print("size:", kpt.shape)
             np.savetxt(os.path.join(save_folder, name + '_kpt.txt'), kpt)
 
         if args.isPose or args.isShow:
@@ -126,6 +126,9 @@ def main(args):
             np.savetxt(os.path.join(save_folder, name + '_camera_matrix.txt'), camera_matrix)
 
             np.savetxt(os.path.join(save_folder, name + '_pose.txt'), pose)
+
+        end = time.clock()
+        print('Running time: %s Seconds' % (end - start))
 
         if args.isShow:
             # ---------- Plot
@@ -141,13 +144,15 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Joint 3D Face Reconstruction and Dense Alignment with Position Map Regression Network')
 
-    parser.add_argument('-i', '--inputDir', default='test.data/AFLW2000-3D_crop/', type=str,
+    parser.add_argument('-i', '--inputDir', default='300WLP_Test/', type=str,
                         help='path to the input directory, where input images are stored.')
+    # parser.add_argument('-i', '--inputDir', default='300VW/cropped/', type=str,
+    #                     help='path to the input directory, where input images are stored.')
     parser.add_argument('-o', '--outputDir', default='TestImages/results', type=str,
                         help='path to the output directory, where results(obj,txt files) will be stored.')
     parser.add_argument('--gpu', default='0', type=str,
                         help='set gpu id, -1 for CPU')
-    parser.add_argument('--model', default='results/6channels.pth', type=str,
+    parser.add_argument('--model', default='results/3channels.pth', type=str,
                         help='model path')
     parser.add_argument('--is3d', default=True, type=ast.literal_eval,
                         help='whether to output 3D face(.obj). default save colors.')
