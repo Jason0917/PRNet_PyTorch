@@ -11,21 +11,17 @@
 This is an unofficial pytorch implementation of **PRNet** since there is not a complete generating and training code
 of [`300WLP`](http://www.cbsr.ia.ac.cn/users/xiangyuzhu/projects/3DDFA/main.htm) dataset.
 
-- Author: Samuel Ko, mjanddy.
+- Author: Samuel Ko, mjanddy, Zihao Jian, Minshan Xie.
+
+### Our Contributions
+
+① Based on the open source code, we proposed two potential improvement and have modified the network architecture and training codes. To use our modified network, please check out **out-and-in** branch or **multi-frames** branch.
+
+② We have added testing code for this repository. Use test.py to estimate the Normalized Mean Error on 300WLP, or use benchmark.py to test on AFLW dataset.
+
+③ We have added data pre-processing code. If you want to use your own facial images, please use utils/generate_posmap_300WLP.py or training and utils/cropImage.py for testing.
 
 -------
-### Update Log 
-
-**@date**: 2019.11.13
-
-**@notice**: An important bug has been fixed by mj in loading uv map. The original `uv_map.jpg` is
-             flipped, so *.npy is used here to redress this problem. Thanks to [mjanddy](https://github.com/mjanddy)!
-
-**@date**: 2019.11.14
-
-**@notice**: Inference Stage Uploaded, pretrain model available in `results/latest.pth`. Thanks to [mjanddy](https://github.com/mjanddy)!
-
-------
 
 ### Noitce
 
@@ -85,6 +81,8 @@ Then `300WLP_IBUG` dataset is the proper structure for training PRNet:
 Except from download from [`300WLP`](http://www.cbsr.ia.ac.cn/users/xiangyuzhu/projects/3DDFA/main.htm),
 I provide processed *original--uv_posmap* pair of IBUG [here](https://drive.google.com/open?id=16zZdkRUNdj7pGmBpZIwQMA00qGHLLi94).
 
+*Please note that the provided dataset only contains about 1,700 samples. To train a robust and generic model, you are strongly recommended to download a full dataset and generate the ground truth of UV maps.
+
 ## ③ Training
 After finish the above two step, you can train your own PRNet as:
 
@@ -93,19 +91,26 @@ After finish the above two step, you can train your own PRNet as:
 python3 train.py --train_dir ./300WLP_IBUG
 ```
 
-You can use tensorboard to visualize the intermediate output in `localhost:6006`:
-```shell
-tensorboard --logdir=absolute_path_of_prnet_runs/
-```
-
-![Tensorboard example](docs/image/Tensorboard1.png)
-
 The following image is used to judge the effectiveness of PRNet to unknown data.
 
 (Original, UV_MAP_gt, UV_MAP_predicted)
 ![Test Data](docs/image/test_img.png)
 
-## ④ Inference
+## ④ Testing
+
+You can use following command to test your model on 300WLP dataset.
+
+``` shell
+python3 test.py --test_dir ./300WLP_IBUG_Test
+```
+
+To test on AFLW dataset, please use this command.
+
+``` shell
+python3 benchmark.py -model results/latest.pth
+```
+
+## ⑤ Inference
 
 You can use following instruction to do your prnet inference. The detail about parameters you can find in `inference.py`.
 ```shell
